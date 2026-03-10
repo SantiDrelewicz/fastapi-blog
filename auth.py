@@ -1,10 +1,16 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
+from typing import Annotated
 
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from pwdlib import PasswordHash
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+import models
 from config import settings
+from database import get_db
 
 
 PASWORD_HASHER = PasswordHash.recommended()
@@ -31,10 +37,11 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY.get_secret_value(), settings.ALGORITHM
+        to_encode,
+        settings.SECRET_KEY.get_secret_value(), 
+        settings.ALGORITHM
     )
     return encoded_jwt
-
 
 def verify_access_token(token: str) -> str | None:
     """Verify a JWT access token and return the subject (user ID) if valid."""
@@ -49,3 +56,32 @@ def verify_access_token(token: str) -> str | None:
         return None
     else:
         return payload.get("sub")
+
+
+async def get_current_user(
+    token: Annotated[str, Depends(OAUTH2_SCHEME)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> models.User:
+    user_id = verify_access_token(token)
+    if user_id is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED,
+                            "Invalid or expired token",
+                            headers={"WWW-Authenticate": "Bearer"})
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED,
+                            "Invalid or expired token",
+                            headers={"WWW-Authenticate": "Bearer"})
+    result = await db.execute(
+        select(models.User)
+        .where(models.User.id == user_id_int),
+    )
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED,
+                            "User not found",
+                            headers={"WWW-Authenticate": "Bearer"})
+    return user
+
+CurrentUser = Annotated[models.User, Depends(get_current_user)]

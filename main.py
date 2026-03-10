@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from database import Base, engine, get_db
 from models import Post, User
+from database import Base, engine, get_db
 from routers import posts, users
 
 
@@ -63,10 +63,13 @@ async def post_page(
     post_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    post = await db.scalar(
-        select(Post).options(selectinload(Post.author)).where(Post.id == post_id),
+    result = await db.execute(
+        select(Post)
+        .options(selectinload(Post.author))
+        .where(Post.id == post_id),
     )
-    if post is not None:
+    post = result.scalars().first()
+    if post:
         title = post.title[:50]
         return templates.TemplateResponse(
             request,
@@ -82,29 +85,35 @@ async def user_posts_page(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    user = await db.scalar(select(User).where(User.id == user_id))
-    if user is None:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-
-    posts = await db.scalars(
+    
+    result = await db.execute(
         select(Post)
         .options(selectinload(Post.author))
         .where(Post.user_id == user_id)
         .order_by(Post.date_posted.desc()),
     )
+    posts = result.scalars().all()
     return templates.TemplateResponse(
         request,
         "user_posts.html",
-        {"posts": posts.all(), "user": user, "title": f"{user.username}'s Posts"},
+        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
     )
 
 
 @app.get("/login", include_in_schema=False)
 async def login_page(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"title": "Login"})
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {"title": "Login"},
+    )
 
 
 @app.get("/register", include_in_schema=False)
@@ -113,6 +122,15 @@ async def register_page(request: Request):
         request,
         "register.html",
         {"title": "Register"},
+    )
+
+
+@app.get("/account", include_in_schema=False)
+async def account_page(request: Request):
+    return templates.TemplateResponse(
+        request,
+        "account.html",
+        {"title": "Account"},
     )
 
 
