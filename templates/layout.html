@@ -10,7 +10,7 @@
             <title>FastAPI Blog</title>
         {% endif %}
         <meta name="description" content="FastAPI Tutorial">
-        <meta name="author" content="Corey Schafer">
+        <meta name="author" content="Santiago Drelewicz">
         <!-- Open Graph Tags: The title of the page for social media sharing. It can match the title tag or be more descriptive. -->
         <meta property="og:title" content="FastAPI Blog">
         <!-- Open Graph Tags: Typically set to "website" for static sites or "article" for content-heavy pages. -->
@@ -244,119 +244,104 @@
         <script>
             const setTheme = (theme) => {
                 if (theme === 'auto') {
-                document.documentElement.setAttribute('data-bs-theme', 
-                    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                    document.documentElement.setAttribute(
+                        'data-bs-theme', 
+                        window.matchMedia('(prefers-color-scheme: dark)'
+                    ).matches ? 'dark' : 'light');
                 } else {
-                document.documentElement.setAttribute('data-bs-theme', theme);
+                    document.documentElement.setAttribute('data-bs-theme', theme);
                 }
                 localStorage.setItem('theme', theme);
-                
                 // Update button text
                 const themeText = { light: '🌝 Light', dark: '🌚 Dark', auto: '🌗 Auto' };
                 document.getElementById('bd-theme-text').textContent = themeText[theme];
             };
-
             // Set theme on click
             document.querySelectorAll('[data-bs-theme-value]').forEach(button => {
                 button.addEventListener('click', () => setTheme(button.getAttribute('data-bs-theme-value')));
             });
-
             // Initialize
             setTheme(localStorage.getItem('theme') || 'auto');
         </script>
         <!-- Auth State Management -->
         <script type="module">
-        import { getCurrentUser, logout } from '/static/js/auth.js';
-
-        // Update navbar based on auth state
-        async function updateAuthUI() {
-            const user = await getCurrentUser();
-            const loggedInNav = document.getElementById('loggedInNav');
-            const loggedOutNav = document.getElementById('loggedOutNav');
-
-            if (user) {
-            loggedInNav.classList.remove('d-none');
-            loggedInNav.classList.add('d-flex');
-            loggedOutNav.classList.add('d-none');
-            document.getElementById('usernameDisplay').textContent = user.email;
-            } else {
-            loggedInNav.classList.add('d-none');
-            loggedInNav.classList.remove('d-flex');
-            loggedOutNav.classList.remove('d-none');
+            import { getCurrentUser, logout } from '/static/js/auth.js';
+            // Update navbar based on auth state
+            async function updateAuthUI() {
+                const user = await getCurrentUser();
+                const loggedInNav = document.getElementById('loggedInNav');
+                const loggedOutNav = document.getElementById('loggedOutNav');
+                if (user) {
+                    loggedInNav.classList.remove('d-none');
+                    loggedInNav.classList.add('d-flex');
+                    loggedOutNav.classList.add('d-none');
+                    document.getElementById('usernameDisplay').textContent = user.email;
+                } else {
+                    loggedInNav.classList.add('d-none');
+                    loggedInNav.classList.remove('d-flex');
+                    loggedOutNav.classList.remove('d-none');
+                }
             }
-        }
-
-        // Logout handler
-        document.getElementById('logoutBtn').addEventListener('click', logout);
-
-        // Update UI on page load
-        updateAuthUI();
+            // Logout handler
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            // Update UI on page load
+            updateAuthUI();
         </script>
         <!-- Create Post Form Handler -->
         <script type="module">
             import {
-            getErrorMessage,
-            hideModal,
-            showModal,
+                getErrorMessage,
+                hideModal,
+                showModal,
             } from "/static/js/utils.js";
-
             const createForm = document.getElementById("createPostForm");
-
             createForm.addEventListener("submit", async (event) => {
-            // Stop default form submission - we'll handle it with JavaScript
-            event.preventDefault();
-
-            // Gather form values into a plain object {title: "...", content: "..."}
-            const formData = new FormData(createForm);
-            const postData = Object.fromEntries(formData.entries());
-
-            // TEMPORARY - hardcoded until authorization (Tutorial 11)
-            postData.user_id = 1;
-
-            try {
-                // POST to our API as JSON
-                const response = await fetch("/api/posts", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(postData),
-                });
-
-                if (response.ok) {
-                const data = await response.json();
-                document.getElementById("successMessage").textContent =
-                    `Post "${data.title}" created successfully!`;
-
-                hideModal("createPostModal");
-                showModal("successModal");
-
-                // Clear form
-                createForm.reset();
-
-                // Reload page after modal is hidden to show new post
-                document
-                    .getElementById("successModal")
-                    .addEventListener(
-                    "hidden.bs.modal",
-                    () => {
-                        window.location.reload();
-                    },
-                    { once: true },
-                    );
-                } else {
-                const error = await response.json();
-                document.getElementById("errorMessage").textContent =
-                    getErrorMessage(error);
-
-                hideModal("createPostModal");
-                showModal("errorModal");
+                // Stop default form submission - we'll handle it with JavaScript
+                event.preventDefault();
+                // Gather form values into a plain object {title: "...", content: "..."}
+                const formData = new FormData(createForm);
+                const postData = Object.fromEntries(formData.entries());
+                // TEMPORARY - hardcoded until authorization (Tutorial 11)
+                postData.user_id = 1;
+                try {
+                    // POST to our API as JSON
+                    const response = await fetch("/api/posts", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(postData),
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        document.getElementById("successMessage").textContent =
+                            `Post "${data.title}" created successfully!`;
+                        hideModal("createPostModal");
+                        showModal("successModal");
+                        // Clear form
+                        createForm.reset();
+                        // Reload page after modal is hidden to show new post
+                        document
+                            .getElementById("successModal")
+                            .addEventListener(
+                                "hidden.bs.modal",
+                                () => {
+                                    window.location.reload();
+                                },
+                                { once: true },
+                            );
+                    } else {
+                        const error = await response.json();
+                        document.getElementById("errorMessage").textContent =
+                            getErrorMessage(error);
+                        hideModal("createPostModal");
+                        showModal("errorModal");
+                    }
+                } catch (error) {
+                    document.getElementById("errorMessage").textContent =
+                        "Network error. Please check your connection and try again.";
+                    showModal("errorModal");
                 }
-            } catch (error) {
-                document.getElementById("errorMessage").textContent =
-                "Network error. Please check your connection and try again.";
-                showModal("errorModal");
-            }
             });
         </script>
         {% block scripts %}

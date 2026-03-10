@@ -9,13 +9,15 @@ from models import Post, User
 from database import get_db
 from schemas import PostCreate, PostResponse, PostUpdate
 
+
 router = APIRouter()
 
 
 @router.get("", response_model=list[PostResponse])
 async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
-        select(Post).options(selectinload(Post.author))
+        select(Post)
+        .options(selectinload(Post.author))
         .order_by(Post.date_posted.desc()),
     )
     posts = result.scalars().all()
@@ -29,8 +31,7 @@ async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
 )
 async def create_post(post: PostCreate, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
-        select(User)
-        .where(User.id == post.user_id),
+        select(User).where(User.id == post.user_id),
     )
     user = result.scalars().first()
     if not user:
@@ -53,9 +54,7 @@ async def create_post(post: PostCreate, db: Annotated[AsyncSession, Depends(get_
 @router.get("/{post_id}", response_model=PostResponse)
 async def get_post(post_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
-        select(Post)
-        .options(selectinload(Post.author))
-        .where(Post.id == post_id),
+        select(Post).options(selectinload(Post.author)).where(Post.id == post_id),
     )
     post = result.scalars().first()
     if post:
@@ -75,11 +74,9 @@ async def update_post_full(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Post not found",
         )
-    
+
     if post_data.user_id != post.user_id:
-        user = await db.scalar(
-            select(User).where(User.id == post_data.user_id)
-        )
+        user = await db.scalar(select(User).where(User.id == post_data.user_id))
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -112,6 +109,7 @@ async def update_post_partial(
     update_data = post_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(post, field, value)
+
     await db.commit()
     await db.refresh(post, attribute_names=["author"])
 
