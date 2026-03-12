@@ -8,7 +8,7 @@ from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import models
+from models import User
 from config import settings
 from database import get_db
 
@@ -61,7 +61,7 @@ def verify_access_token(token: str) -> str | None:
 async def get_current_user(
     token: Annotated[str, Depends(OAUTH2_SCHEME)],
     db: Annotated[AsyncSession, Depends(get_db)],
-) -> models.User:
+) -> User:
     user_id = verify_access_token(token)
     if user_id is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED,
@@ -74,8 +74,8 @@ async def get_current_user(
                             "Invalid or expired token",
                             headers={"WWW-Authenticate": "Bearer"})
     result = await db.execute(
-        select(models.User)
-        .where(models.User.id == user_id_int),
+        select(User)
+        .where(User.id == user_id_int),
     )
     user = result.scalars().first()
     if not user:
@@ -84,4 +84,4 @@ async def get_current_user(
                             headers={"WWW-Authenticate": "Bearer"})
     return user
 
-CurrentUser = Annotated[models.User, Depends(get_current_user)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
