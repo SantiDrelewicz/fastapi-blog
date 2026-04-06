@@ -9,12 +9,13 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from models import Post, User
+import models
+from config import settings
 from database import Base, engine, get_db
 from routers import posts, users
 
@@ -34,26 +35,37 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/media", StaticFiles(directory="media"), name="media")
 
+templates = Jinja2Templates(directory="templates")
+
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-
-
-templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/", include_in_schema=False, name="home")
 @app.get("/posts", include_in_schema=False, name="posts")
 async def home(request: Request, db: Annotated[AsyncSession, Depends(get_db)]):
+    count_result = await db.execute(select(func.count()).select_from(models.Post))
+    total = count_result.scalar() or 0
+
     result = await db.execute(
-        select(Post)
-        .options(selectinload(Post.author))
-        .order_by(Post.date_posted.desc()),
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .order_by(models.Post.date_posted.desc())
+        .limit(settings.POSTS_PER_PAGE),
     )
     posts = result.scalars().all()
+
+    has_more = len(posts) < total
+
     return templates.TemplateResponse(
         request,
         "home.html",
-        {"posts": posts, "title": "Home"},
+        {
+            "posts": posts,
+            "title": "Home",
+            "limit": settings.POSTS_PER_PAGE,
+            "has_more": has_more,
+        },
     )
 
 
@@ -64,9 +76,9 @@ async def post_page(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(
-        select(Post)
-        .options(selectinload(Post.author))
-        .where(Post.id == post_id),
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.id == post_id),
     )
     post = result.scalars().first()
     if post:
@@ -85,25 +97,42 @@ async def user_posts_page(
     user_id: int,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
+    count_result = await db.execute(
+        select(func.count())
+        .select_from(models.Post)
+        .where(models.Post.user_id == user_id),
+    )
+    total = count_result.scalar() or 0
+
     result = await db.execute(
-        select(Post)
-        .options(selectinload(Post.author))
-        .where(Post.user_id == user_id)
-        .order_by(Post.date_posted.desc()),
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .where(models.Post.user_id == user_id)
+        .order_by(models.Post.date_posted.desc())
+        .limit(settings.POSTS_PER_PAGE),
     )
     posts = result.scalars().all()
+
+    has_more = len(posts) < total
+
     return templates.TemplateResponse(
         request,
         "user_posts.html",
-        {"posts": posts, "user": user, "title": f"{user.username}'s Posts"},
+        {
+            "posts": posts,
+            "user": user,
+            "title": f"{user.username}'s Posts",
+            "limit": settings.POSTS_PER_PAGE,
+            "has_more": has_more,
+        },
     )
 
 
@@ -144,9 +173,9 @@ async def general_http_exception_handler(
 
     message = (
         exception.detail
-        if exception.detail
-        else "An error occurred. Please check your request and try again."
+        or "An error occurred. Please check your request and try again."
     )
+
     return templates.TemplateResponse(
         request,
         "error.html",

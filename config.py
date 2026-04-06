@@ -11,5 +11,6 @@ class Settings(BaseSettings):
     
     MAX_UPLOAD_SIZE_BYTES: int = 5 * 1024 * 1024    # 5 MB
 
+    POSTS_PER_PAGE: int = 10
 
 settings = Settings()  # type: ignore[call-arg] Loaded from .env file
