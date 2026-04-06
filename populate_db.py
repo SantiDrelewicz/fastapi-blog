@@ -18,31 +18,31 @@ USERS = [
         "username": "usuario_uno",
         "email": "usuario_uno@ejemplo.com",
         "password": "ClaveSegura1",
-        "image_name": "willow.png"
+        "image": "willow.png"
     },
     {
         "username": "usuario_dos",
         "email": "usuario_dos@ejemplo.com",
         "password": "MiPassword2",
-        "image_name": "maradona.png"
+        "image": "maradona.png"
     },
     {
         "username": "usuario_tres",
         "email": "usuario_tres@ejemplo.com",
         "password": "Seguridad123",
-        "image_name": "poppy.png"
+        "image": "poppy.png"
     },
     {
         "username": "usuario_cuatro",
         "email": "usuario_cuatro@ejemplo.com",
         "password": "ClaveAlpha9",
-        "image_name": "bronx.png"
+        "image": "bronx.png"
     },
     {
         "username": "usuario_cinco",
         "email": "usuario_cinco@ejemplo.com",
         "password": "PruebaPass88",
-        "image_name": "farmdogs.png"
+        "image": "farmdogs.png"
     },
     {
         "username": "usuario_seis",
@@ -346,14 +346,14 @@ async def populate() -> None:
 
         print(f"\nCreating {len(POSTS) + 1} posts...")
 
-        # First create POST_44 (will become oldest after date update)
+        # First create POST_45 (will become oldest after date update)
         response = await client.post(
             "/api/posts",
-            json={"title": POST_44["title"], "content": POST_44["content"]},
+            json={"title": POST_45["title"], "content": POST_45["content"]},
             headers={"Authorization": f"Bearer {users[0]['token']}"},
         )
         response.raise_for_status()
-        print(f"  Created: '{POST_44['title']}'")
+        print(f"  Created: '{POST_45['title']}'")
 
         # Create remaining posts in reverse (last in list = oldest, first = newest)
         for i, post_data in enumerate(reversed(POSTS)):
