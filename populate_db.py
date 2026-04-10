@@ -15,8 +15,8 @@ POPULATE_IMAGES_DIR = Path("populate_images")
 
 USERS = [
     {
-        "username": "usuario_uno",
-        "email": "usuario_uno@ejemplo.com",
+        "username": "santidrelewicz2000",
+        "email": "santidrelewicz2000@gmail.com",
         "password": "ClaveSegura1",
         "image": "willow.png"
     },
@@ -231,12 +231,11 @@ POSTS = [
     }
 ]
 
-# The 44th post - always the oldest (easter egg for pagination tutorial)
+# The 45th post - always the oldest (easter egg for pagination tutorial)
 POST_45 = {
     "title": "La pasión del fútbol argentino",
     "content": "El fútbol argentino se caracteriza por su intensidad, historia y la pasión de los hinchas, siendo una parte fundamental de la cultura del país."
 }
-
 
 
 async def clear_existing_data() -> None:
@@ -249,6 +248,7 @@ async def clear_existing_data() -> None:
 
     # Clear database tables (order respects foreign keys)
     async with AsyncSessionLocal() as db:
+        await db.execute(delete(models.PasswordResetToken))
         await db.execute(delete(models.Post))
         await db.execute(delete(models.User))
         await db.commit()

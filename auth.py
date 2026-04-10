@@ -1,5 +1,8 @@
 from datetime import UTC, datetime, timedelta
+import hashlib
+import secrets
 from typing import Annotated
+
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -21,9 +24,14 @@ OAUTH2_SCHEME = OAuth2PasswordBearer(tokenUrl="api/users/token")
 def hash_password(password: str) -> str:
     return PASWORD_HASHER.hash(password)
 
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return PASWORD_HASHER.verify(plain_password, hashed_password)
+
+def generate_reset_token() -> str:
+    return secrets.token_urlsafe(32)
+
+def hash_reset_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
